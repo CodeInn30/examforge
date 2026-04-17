@@ -6,7 +6,7 @@ import { apiFetch } from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
+import { User, KeyRound, CheckCircle2 } from "lucide-react";
 
 export default function SettingsPage() {
   const { admin } = useAuth();
@@ -29,7 +29,7 @@ export default function SettingsPage() {
     const data = await res.json();
 
     if (res.ok) {
-      setMessage("Profile updated");
+      setMessage("Profile updated successfully");
     } else {
       setError(data.error ?? "Update failed");
     }
@@ -37,48 +37,100 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-6">
+    <div className="flex flex-col flex-1 p-6 gap-6">
+      {/* Page header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground mt-1">Manage your admin profile</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Manage your admin profile and account
+        </p>
       </div>
 
-      <Card className="p-6">
-        <h2 className="font-semibold mb-4">Profile</h2>
-        <form onSubmit={handleSave} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <div className="max-w-2xl flex flex-col gap-6">
+        {/* Profile card */}
+        <div className="bg-card border rounded-xl overflow-hidden">
+          {/* Card header section */}
+          <div className="flex items-center gap-3 px-5 py-4 border-b bg-muted/30">
+            <div className="rounded-lg bg-primary/10 p-2">
+              <User className="size-4 text-primary" />
+            </div>
+            <div>
+              <p className="font-semibold text-sm">Profile</p>
+              <p className="text-xs text-muted-foreground">
+                Update your display name and email address
+              </p>
+            </div>
           </div>
 
-          {message && (
-            <p className="text-sm bg-green-50 text-green-800 border border-green-200 px-3 py-2 rounded-md">
-              {message}
+          <form onSubmit={handleSave} className="p-5 space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+            </div>
+
+            {message && (
+              <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-3 py-2.5 rounded-lg">
+                <CheckCircle2 className="size-4 shrink-0" />
+                {message}
+              </div>
+            )}
+            {error && (
+              <p className="text-sm text-destructive bg-destructive/8 border border-destructive/20 px-3 py-2.5 rounded-lg">
+                {error}
+              </p>
+            )}
+
+            <div className="pt-1">
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving…" : "Save Changes"}
+              </Button>
+            </div>
+          </form>
+        </div>
+
+        {/* Password card */}
+        <div className="bg-card border rounded-xl overflow-hidden">
+          <div className="flex items-center gap-3 px-5 py-4 border-b bg-muted/30">
+            <div className="rounded-lg bg-muted p-2">
+              <KeyRound className="size-4 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="font-semibold text-sm">Change Password</p>
+              <p className="text-xs text-muted-foreground">
+                Reset your password via email
+              </p>
+            </div>
+          </div>
+
+          <div className="p-5 flex items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">
+              Use the forgot password flow to change your password securely. A
+              reset link will be sent to your email address.
             </p>
-          )}
-          {error && (
-            <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">{error}</p>
-          )}
-
-          <Button type="submit" disabled={saving}>
-            {saving ? "Saving…" : "Save Changes"}
-          </Button>
-        </form>
-      </Card>
-
-      <Card className="p-6">
-        <h2 className="font-semibold mb-2">Change Password</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          Use the forgot password flow to change your password securely.
-        </p>
-        <a href="/admin/forgot-password" className="text-sm underline hover:no-underline">
-          Send password reset email →
-        </a>
-      </Card>
+            <a
+              href="/admin/forgot-password"
+              className="shrink-0 inline-flex items-center justify-center rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-accent/40 transition-colors"
+            >
+              Send reset email
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

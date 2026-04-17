@@ -4,9 +4,19 @@ import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Clock, Users, FileQuestion, Shield, BarChart2, Copy, Check } from "lucide-react";
+import {
+  ArrowLeft,
+  Clock,
+  Users,
+  FileQuestion,
+  Shield,
+  BarChart2,
+  Copy,
+  Check,
+  ExternalLink,
+  ArrowRight,
+} from "lucide-react";
 
 interface ExamDetail {
   id: string;
@@ -27,14 +37,41 @@ interface ExamDetail {
   _count: { sessions: number };
 }
 
-const statusColors: Record<string, string> = {
-  draft: "bg-zinc-100 text-zinc-700",
-  published: "bg-green-100 text-green-700",
-  closed: "bg-amber-100 text-amber-700",
-  archived: "bg-red-100 text-red-700",
+const statusConfig: Record<string, string> = {
+  draft: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300",
+  published:
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+  closed:
+    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  archived: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
 };
 
-export default function ExamDetailPage({ params }: { params: Promise<{ id: string }> }) {
+const navLinks = (id: string) => [
+  {
+    href: `/admin/dashboard/exams/${id}/questions`,
+    label: "Questions",
+    description: "Manage and reorder exam questions",
+    icon: FileQuestion,
+  },
+  {
+    href: `/admin/dashboard/exams/${id}/access`,
+    label: "Access Control",
+    description: "Configure who can take this exam",
+    icon: Shield,
+  },
+  {
+    href: `/admin/dashboard/exams/${id}/results`,
+    label: "Submissions",
+    description: "View student results and analytics",
+    icon: Users,
+  },
+];
+
+export default function ExamDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const [exam, setExam] = useState<ExamDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,7 +80,9 @@ export default function ExamDetailPage({ params }: { params: Promise<{ id: strin
   const [error, setError] = useState("");
 
   const appUrl =
-    typeof window !== "undefined" ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL ?? "";
+    typeof window !== "undefined"
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_APP_URL ?? "";
   const examLink = exam ? `${appUrl}/exam/${exam.slug}` : "";
 
   useEffect(() => {
@@ -57,10 +96,15 @@ export default function ExamDetailPage({ params }: { params: Promise<{ id: strin
   async function togglePublish() {
     if (!exam) return;
     setPublishing(true);
-    const res = await apiFetch(`/api/admin/exams/${id}/publish`, { method: "PATCH" });
+    const res = await apiFetch(`/api/admin/exams/${id}/publish`, {
+      method: "PATCH",
+    });
     const data = await res.json();
     if (res.ok) {
-      setExam((e) => e && { ...e, isPublished: data.exam.isPublished, status: data.exam.status });
+      setExam(
+        (e) =>
+          e && { ...e, isPublished: data.exam.isPublished, status: data.exam.status }
+      );
     } else {
       setError(data.error ?? "Failed to update");
     }
@@ -73,88 +117,170 @@ export default function ExamDetailPage({ params }: { params: Promise<{ id: strin
     setTimeout(() => setCopied(false), 2000);
   }
 
-  if (loading) return <div className="p-6"><Skeleton className="h-64 w-full rounded-lg" /></div>;
-  if (!exam) return <div className="p-6 text-destructive">{error || "Exam not found"}</div>;
+  if (loading) {
+    return (
+      <div className="flex flex-col flex-1 p-6 gap-6">
+        <Skeleton className="h-10 w-64 rounded-xl" />
+        <Skeleton className="h-16 w-full rounded-xl" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-xl" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
-  const navLinks = [
-    { href: `/admin/dashboard/exams/${id}/questions`, label: "Questions", icon: FileQuestion },
-    { href: `/admin/dashboard/exams/${id}/access`, label: "Access Control", icon: Shield },
-    { href: `/admin/dashboard/exams/${id}/results`, label: "Submissions", icon: Users },
-  ];
+  if (!exam) {
+    return (
+      <div className="flex flex-col flex-1 p-6 gap-6">
+        <p className="text-sm text-destructive bg-destructive/8 border border-destructive/20 px-3 py-2.5 rounded-lg">
+          {error || "Exam not found"}
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-2xl font-bold tracking-tight truncate">{exam.title}</h1>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[exam.status]}`}>
-              {exam.status}
-            </span>
+    <div className="flex flex-col flex-1 p-6 gap-6">
+      {/* Back navigation */}
+      <div>
+        <Link
+          href="/admin/dashboard/exams"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-2"
+        >
+          <ArrowLeft className="size-4" />
+          Back
+        </Link>
+
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-2xl font-bold tracking-tight truncate">
+                {exam.title}
+              </h1>
+              <span
+                className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${statusConfig[exam.status] ?? ""}`}
+              >
+                {exam.status}
+              </span>
+            </div>
+            {exam.description && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {exam.description}
+              </p>
+            )}
           </div>
-          {exam.description && <p className="text-sm text-muted-foreground mt-1">{exam.description}</p>}
-        </div>
-        <div className="flex gap-2 shrink-0">
-          <Link href={`/admin/dashboard/exams/${id}/questions`}>
-            <Button variant="outline" size="sm">Edit Questions</Button>
-          </Link>
-          <Button
-            onClick={togglePublish}
-            disabled={publishing}
-            size="sm"
-            variant={exam.isPublished ? "destructive" : "default"}
-          >
-            {publishing ? "…" : exam.isPublished ? "Unpublish" : "Publish"}
-          </Button>
+          <div className="flex gap-2 shrink-0">
+            <Link href={`/admin/dashboard/exams/${id}/questions`}>
+              <Button variant="outline" size="sm">
+                Edit Questions
+              </Button>
+            </Link>
+            <Button
+              onClick={togglePublish}
+              disabled={publishing}
+              size="sm"
+              variant={exam.isPublished ? "destructive" : "default"}
+            >
+              {publishing ? "…" : exam.isPublished ? "Unpublish" : "Publish"}
+            </Button>
+          </div>
         </div>
       </div>
 
-      {error && <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">{error}</p>}
+      {/* Error */}
+      {error && (
+        <p className="text-sm text-destructive bg-destructive/8 border border-destructive/20 px-3 py-2.5 rounded-lg">
+          {error}
+        </p>
+      )}
 
-      {/* Exam link */}
+      {/* Published link */}
       {exam.isPublished && (
-        <div className="flex items-center gap-2 border rounded-lg p-3 bg-green-50">
-          <span className="text-sm flex-1 truncate font-mono text-green-800">{examLink}</span>
-          <Button size="sm" variant="outline" onClick={copyLink} className="shrink-0">
-            {copied ? <Check size={14} /> : <Copy size={14} />}
+        <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-3">
+          <ExternalLink className="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span className="text-sm flex-1 truncate font-mono text-emerald-800 dark:text-emerald-300">
+            {examLink}
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={copyLink}
+            className="shrink-0"
+          >
+            {copied ? (
+              <Check className="size-3.5 mr-1" />
+            ) : (
+              <Copy className="size-3.5 mr-1" />
+            )}
             {copied ? "Copied" : "Copy"}
           </Button>
         </div>
       )}
 
-      {/* Stats */}
+      {/* Stat cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="border rounded-lg p-4">
-          <p className="text-xs text-muted-foreground">Submissions</p>
-          <p className="text-2xl font-bold mt-1">{exam._count.sessions}</p>
+        <div className="bg-card border rounded-xl p-5">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Submissions
+          </p>
+          <p className="text-3xl font-bold mt-1.5">{exam._count.sessions}</p>
+          <p className="text-xs text-muted-foreground mt-1">students</p>
         </div>
-        <div className="border rounded-lg p-4">
-          <p className="text-xs text-muted-foreground">Total Marks</p>
-          <p className="text-2xl font-bold mt-1">{exam.totalMarks}</p>
+        <div className="bg-card border rounded-xl p-5">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Total Marks
+          </p>
+          <p className="text-3xl font-bold mt-1.5">{exam.totalMarks}</p>
+          <p className="text-xs text-muted-foreground mt-1">points</p>
         </div>
-        <div className="border rounded-lg p-4">
-          <p className="text-xs text-muted-foreground">Pass Score</p>
-          <p className="text-2xl font-bold mt-1">{exam.passingScorePercent}%</p>
+        <div className="bg-card border rounded-xl p-5">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Pass Score
+          </p>
+          <p className="text-3xl font-bold mt-1.5">
+            {exam.passingScorePercent}%
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">threshold</p>
         </div>
-        <div className="border rounded-lg p-4">
-          <p className="text-xs text-muted-foreground">Time Limit</p>
-          <p className="text-2xl font-bold mt-1">
-            {exam.timeLimitMinutes ? `${exam.timeLimitMinutes}m` : "None"}
+        <div className="bg-card border rounded-xl p-5">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Time Limit
+          </p>
+          <p className="text-3xl font-bold mt-1.5">
+            {exam.timeLimitMinutes ? `${exam.timeLimitMinutes}` : "—"}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {exam.timeLimitMinutes ? "minutes" : "no limit"}
           </p>
         </div>
       </div>
 
-      {/* Navigation sections */}
+      {/* Navigation cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {navLinks.map(({ href, label, icon: Icon }) => (
+        {navLinks(id).map(({ href, label, description, icon: Icon }) => (
           <Link
             key={href}
             href={href}
-            className="border rounded-lg p-4 hover:bg-accent/50 transition-colors flex items-center gap-3"
+            className="bg-card border rounded-xl p-5 hover:bg-accent/40 transition-colors flex items-center gap-4"
           >
-            <Icon size={20} className="text-muted-foreground" />
-            <span className="font-medium">{label}</span>
+            <div className="shrink-0 rounded-lg bg-muted p-2.5">
+              <Icon className="size-5 text-muted-foreground" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm">{label}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {description}
+              </p>
+            </div>
+            <ArrowRight className="size-4 text-muted-foreground shrink-0" />
           </Link>
         ))}
       </div>

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, startTransition } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ExamTimer } from "@/components/exam/ExamTimer";
 import { FullscreenGuard } from "@/components/exam/FullscreenGuard";
 import { QuestionCard } from "@/components/exam/QuestionCard";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle2, AlertCircle } from "lucide-react";
 
 interface Option {
   id: string;
@@ -40,6 +40,7 @@ export default function ExamTakingPage() {
 
   const sessionTokenRef = useRef<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load session from sessionStorage
   useEffect(() => {
@@ -48,7 +49,7 @@ export default function ExamTakingPage() {
     const storedSlug = sessionStorage.getItem("exam_slug");
 
     if (!token || !id || storedSlug !== slug) {
-      router.replace(`/exam/${slug}`);
+      startTransition(() => router.replace(`/exam/${slug}`));
       return;
     }
 
@@ -123,26 +124,23 @@ export default function ExamTakingPage() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [submitted]);
 
-  // Auto-save answer
+  // Auto-save answer (debounced 500ms to prevent burst POSTs on rapid clicks)
   const saveAnswer = useCallback(
-    async (questionId: string, optionIds: string[]) => {
+    (questionId: string, optionIds: string[]) => {
       const token = sessionTokenRef.current;
       if (!token) return;
 
       setSavedAnswers((prev) => ({ ...prev, [questionId]: optionIds }));
 
-      const res = await fetch(`/api/exam/${slug}/response`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-session-token": token },
-        body: JSON.stringify({
-          questionId,
-          optionIds,
-          isSkipped: optionIds.length === 0,
-        }),
-      });
-      if (res.status === 401) {
-        handleInvalidatedSession();
-      }
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(async () => {
+        const res = await fetch(`/api/exam/${slug}/response`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-session-token": token },
+          body: JSON.stringify({ questionId, optionIds, isSkipped: optionIds.length === 0 }),
+        });
+        if (res.status === 401) handleInvalidatedSession();
+      }, 500);
     },
     [slug, handleInvalidatedSession]
   );
@@ -165,7 +163,7 @@ export default function ExamTakingPage() {
       if (res.ok) {
         sessionStorage.removeItem("session_token");
         sessionStorage.removeItem("session_id");
-        router.push(`/exam/${slug}/result?session=${id}`);
+        startTransition(() => router.push(`/exam/${slug}/result?session=${id}`));
       } else {
         const data = await res.json();
         setError(data.error ?? "Submission failed");
@@ -187,9 +185,11 @@ export default function ExamTakingPage() {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
         <div className="text-center space-y-4 max-w-sm">
-          <div className="text-4xl">⚠️</div>
+          <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mx-auto">
+            <AlertTriangle size={26} className="text-amber-600" />
+          </div>
           <h2 className="text-xl font-bold">Session Closed</h2>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-sm leading-relaxed">
             This exam session was opened in another window. Only one active session is allowed per
             exam. Please use the other window to continue.
           </p>
@@ -201,17 +201,20 @@ export default function ExamTakingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 size={24} className="animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <Loader2 size={28} className="animate-spin text-primary" />
+          <p className="text-sm">Loading your exam…</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center space-y-4">
-          <p className="text-destructive">{error}</p>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+        <div className="text-center space-y-4 max-w-sm">
+          <p className="text-destructive text-sm">{error}</p>
           <Button onClick={() => router.push(`/exam/${slug}`)}>Go Back</Button>
         </div>
       </div>
@@ -220,10 +223,11 @@ export default function ExamTakingPage() {
 
   if (submitting) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader2 size={32} className="animate-spin mx-auto" />
-          <p className="font-medium">Submitting your exam…</p>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <Loader2 size={32} className="animate-spin text-primary" />
+          <p className="font-medium text-foreground">Submitting your exam…</p>
+          <p className="text-sm">Please do not close this window.</p>
         </div>
       </div>
     );
@@ -237,21 +241,24 @@ export default function ExamTakingPage() {
 
       <div className="min-h-screen flex flex-col bg-background">
         {/* Top bar */}
-        <div className="border-b px-4 py-3 flex items-center justify-between bg-card sticky top-0 z-10">
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium">
-              {currentIndex + 1} / {questions.length}
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {/* Q progress label */}
+            <span className="text-sm font-bold tabular-nums">
+              Q{currentIndex + 1} / {questions.length}
             </span>
-            <div className="hidden sm:flex gap-1 flex-wrap max-w-sm">
+
+            {/* Question number grid */}
+            <div className="hidden sm:flex gap-1 flex-wrap max-w-xs">
               {questions.map((q, i) => (
                 <button
                   key={q.id}
                   onClick={() => setCurrentIndex(i)}
-                  className={`w-6 h-6 rounded text-xs font-medium transition-colors ${
+                  className={`w-6 h-6 rounded text-xs font-semibold transition-colors ${
                     i === currentIndex
                       ? "bg-primary text-primary-foreground"
                       : savedAnswers[q.id]?.length > 0
-                      ? "bg-green-100 text-green-700"
+                      ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
                       : "bg-muted text-muted-foreground hover:bg-accent"
                   }`}
                 >
@@ -285,29 +292,55 @@ export default function ExamTakingPage() {
 
       {/* Review modal */}
       {showReview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-white rounded-xl p-6 max-w-sm w-full space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="bg-card rounded-2xl border shadow-xl p-6 max-w-sm w-full space-y-5">
             <h2 className="text-lg font-bold">Ready to submit?</h2>
-            <div className="space-y-2 text-sm">
-              <p>
-                <span className="font-medium">Answered:</span>{" "}
-                {questions.length - unansweredCount} / {questions.length}
-              </p>
+
+            <div className="space-y-3">
+              {/* Answered count */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+                <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
+                <div className="text-sm">
+                  <span className="font-semibold">{questions.length - unansweredCount}</span>
+                  <span className="text-muted-foreground"> of {questions.length} answered</span>
+                </div>
+              </div>
+
+              {/* Unanswered count — only if > 0 */}
               {unansweredCount > 0 && (
-                <p className="text-amber-600 font-medium">
-                  ⚠️ {unansweredCount} question{unansweredCount > 1 ? "s" : ""} unanswered
-                </p>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                  <AlertCircle size={18} className="text-amber-600 shrink-0" />
+                  <div className="text-sm">
+                    <span className="font-semibold text-amber-800">{unansweredCount}</span>
+                    <span className="text-amber-700">
+                      {" "}
+                      question{unansweredCount > 1 ? "s" : ""} unanswered
+                    </span>
+                  </div>
+                </div>
               )}
             </div>
+
+            {unansweredCount > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Unanswered questions will be marked as skipped.
+              </p>
+            )}
+
             <p className="text-xs text-muted-foreground">
               Once submitted, you cannot change your answers.
             </p>
-            <div className="flex gap-3">
-              <Button className="flex-1" onClick={submitExam}>
+
+            <div className="flex flex-col gap-2">
+              <Button className="w-full" size="lg" onClick={submitExam}>
                 Submit Exam
               </Button>
-              <Button variant="outline" className="flex-1" onClick={() => setShowReview(false)}>
-                Review
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setShowReview(false)}
+              >
+                Continue Review
               </Button>
             </div>
           </div>

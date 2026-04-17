@@ -1,13 +1,28 @@
-import { AuthProvider } from "@/components/admin/AuthProvider";
-import { DashboardNav } from "@/components/admin/DashboardNav";
+import { AuthProvider } from "@/components/admin/AuthProvider"
+import { AppSidebar } from "@/components/app-sidebar"
+import { SiteHeader } from "@/components/site-header"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { TooltipProvider } from "@/components/ui/tooltip"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <div className="flex min-h-screen bg-background">
-        <DashboardNav />
-        <main className="flex-1 overflow-auto">{children}</main>
-      </div>
+      <TooltipProvider delayDuration={0}>
+        <SidebarProvider
+          style={
+            {
+              "--sidebar-width": "15rem",
+              "--header-height": "3rem",
+            } as React.CSSProperties
+          }
+        >
+          <AppSidebar />
+          <SidebarInset className="min-h-svh">
+            <SiteHeader />
+            {children}
+          </SidebarInset>
+        </SidebarProvider>
+      </TooltipProvider>
     </AuthProvider>
-  );
+  )
 }

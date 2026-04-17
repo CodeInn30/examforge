@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAdminAuth } from "@/lib/withAdminAuth";
+import { invalidateExamCaches } from "@/lib/examCacheInvalidation";
 import { updateQuestionSchema } from "@/lib/validators/examSchemas";
 import { z } from "zod";
 
@@ -68,6 +69,7 @@ export function PATCH(req: NextRequest, ctx: RouteContext) {
       await prisma.examForm.update({ where: { id: examId }, data: { totalMarks } });
     }
 
+    await invalidateExamCaches(examId);
     return NextResponse.json({ question: updated });
   })(req, ctx);
 }
@@ -87,6 +89,7 @@ export function DELETE(req: NextRequest, ctx: RouteContext) {
     if (!question) return NextResponse.json({ error: "Question not found" }, { status: 404 });
 
     await prisma.examQuestion.delete({ where: { id: qid } });
+    await invalidateExamCaches(examId);
 
     // Recalculate total marks
     const allQuestions = await prisma.examQuestion.findMany({

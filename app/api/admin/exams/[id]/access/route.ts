@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAdminAuth } from "@/lib/withAdminAuth";
+import { invalidateExamCaches } from "@/lib/examCacheInvalidation";
 import { updateAccessRuleSchema } from "@/lib/validators/accessSchemas";
 import { z } from "zod";
 
@@ -45,6 +46,7 @@ export function PATCH(req: NextRequest, ctx: RouteContext) {
       create: { examFormId: examId, accessType: body.accessType },
     });
 
+    await invalidateExamCaches(examId, exam.slug);
     return NextResponse.json({ rule });
   })(req, ctx);
 }

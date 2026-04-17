@@ -4,9 +4,15 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Clock, Users } from "lucide-react";
+import {
+  Plus,
+  Clock,
+  Users,
+  FileSpreadsheet,
+  BookOpen,
+  ChevronRight,
+} from "lucide-react";
 
 interface Exam {
   id: string;
@@ -20,11 +26,13 @@ interface Exam {
   _count: { questions: number; sessions: number };
 }
 
-const statusColors: Record<string, string> = {
-  draft: "bg-zinc-100 text-zinc-700",
-  published: "bg-green-100 text-green-700",
-  closed: "bg-amber-100 text-amber-700",
-  archived: "bg-red-100 text-red-700",
+const statusConfig: Record<string, string> = {
+  draft: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300",
+  published:
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+  closed:
+    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  archived: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
 };
 
 export default function ExamsListPage() {
@@ -41,71 +49,102 @@ export default function ExamsListPage() {
   }, []);
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
+    <div className="flex flex-col flex-1 p-6 gap-6">
+      {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Exams</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage your examination forms</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage your examination forms
+          </p>
         </div>
         <Link href="/admin/dashboard/exams/new">
           <Button>
-            <Plus size={16} className="mr-2" />
+            <Plus className="size-4 mr-2" />
             New Exam
           </Button>
         </Link>
       </div>
 
+      {/* Error */}
       {error && (
-        <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">{error}</p>
+        <p className="text-sm text-destructive bg-destructive/8 border border-destructive/20 px-3 py-2.5 rounded-lg">
+          {error}
+        </p>
       )}
 
+      {/* Loading */}
       {loading ? (
-        <div className="space-y-3">
-          {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-20 w-full rounded-lg" />
+        <div className="grid grid-cols-1 gap-3">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full rounded-xl" />
           ))}
         </div>
       ) : exams.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
-          <p className="text-lg font-medium">No exams yet</p>
-          <p className="text-sm mt-1">Create your first exam to get started</p>
+        /* Empty state */
+        <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
+          <div className="rounded-2xl bg-muted p-5">
+            <BookOpen className="size-10 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="text-lg font-semibold">No exams yet</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Create your first exam to get started
+            </p>
+          </div>
+          <Link href="/admin/dashboard/exams/new">
+            <Button>
+              <Plus className="size-4 mr-2" />
+              New Exam
+            </Button>
+          </Link>
         </div>
       ) : (
-        <div className="space-y-3">
+        /* Exam list */
+        <div className="grid grid-cols-1 gap-3">
           {exams.map((exam) => (
             <Link
               key={exam.id}
               href={`/admin/dashboard/exams/${exam.id}`}
-              className="block border rounded-lg p-4 hover:bg-accent/50 transition-colors"
+              className="bg-card border rounded-xl p-5 hover:bg-accent/40 transition-colors flex items-center gap-4"
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium truncate">{exam.title}</span>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[exam.status] ?? ""}`}
-                    >
-                      {exam.status}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                    <span>{exam._count.questions} questions</span>
-                    <span className="flex items-center gap-1">
-                      <Users size={12} />
-                      {exam._count.sessions} submissions
-                    </span>
-                    {exam.timeLimitMinutes && (
-                      <span className="flex items-center gap-1">
-                        <Clock size={12} />
-                        {exam.timeLimitMinutes} min
-                      </span>
-                    )}
-                    <span>{exam.totalMarks} marks</span>
-                  </div>
+              {/* Icon box */}
+              <div className="shrink-0 rounded-lg bg-primary/10 p-2.5">
+                <FileSpreadsheet className="size-5 text-primary" />
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold truncate">{exam.title}</span>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusConfig[exam.status] ?? ""}`}
+                  >
+                    {exam.status}
+                  </span>
                 </div>
-                <span className="text-xs text-muted-foreground shrink-0">
+                <div className="flex items-center gap-4 mt-1.5 text-xs text-muted-foreground flex-wrap">
+                  <span>{exam._count.questions} questions</span>
+                  <span className="flex items-center gap-1">
+                    <Users className="size-3" />
+                    {exam._count.sessions} submissions
+                  </span>
+                  {exam.timeLimitMinutes && (
+                    <span className="flex items-center gap-1">
+                      <Clock className="size-3" />
+                      {exam.timeLimitMinutes} min
+                    </span>
+                  )}
+                  <span>{exam.totalMarks} marks</span>
+                </div>
+              </div>
+
+              {/* Right: date + arrow */}
+              <div className="shrink-0 flex items-center gap-2 text-muted-foreground">
+                <span className="text-xs hidden sm:block">
                   {new Date(exam.createdAt).toLocaleDateString()}
                 </span>
+                <ChevronRight className="size-4" />
               </div>
             </Link>
           ))}

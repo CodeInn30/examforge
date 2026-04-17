@@ -7,7 +7,11 @@ import { QuestionEditor } from "@/components/admin/QuestionEditor";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
 
-export default function QuestionsPage({ params }: { params: Promise<{ id: string }> }) {
+export default function QuestionsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [questions, setQuestions] = useState<any[]>([]);
@@ -25,20 +29,35 @@ export default function QuestionsPage({ params }: { params: Promise<{ id: string
   }, [id]);
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href={`/admin/dashboard/exams/${id}`} className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft size={18} />
+    <div className="flex flex-col flex-1 p-6 gap-6">
+      {/* Back + header */}
+      <div>
+        <Link
+          href={`/admin/dashboard/exams/${id}`}
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-2"
+        >
+          <ArrowLeft className="size-4" />
+          Back
         </Link>
-        <div>
+        <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold tracking-tight">Questions</h1>
-          {examTitle && <p className="text-sm text-muted-foreground">{examTitle}</p>}
+          {!loading && (
+            <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+              {questions.length}
+            </span>
+          )}
         </div>
+        {examTitle && (
+          <p className="text-sm text-muted-foreground mt-1">{examTitle}</p>
+        )}
       </div>
 
+      {/* Loading skeleton */}
       {loading ? (
         <div className="space-y-3">
-          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-lg" />)}
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full rounded-xl" />
+          ))}
         </div>
       ) : (
         <QuestionEditor examId={id} questions={questions} onUpdate={setQuestions} />

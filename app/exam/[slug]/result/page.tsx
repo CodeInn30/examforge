@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { useSearchParams, useParams } from "next/navigation";
+import { useSearchParams, useParams, useRouter } from "next/navigation";
 import { ResultCard } from "@/components/exam/ResultCard";
-import { Loader2 } from "lucide-react";
+import { Loader2, FileX } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 function ResultContent() {
   const params = useParams();
+  const router = useRouter();
   const slug = params.slug as string;
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session");
@@ -43,18 +45,29 @@ function ResultContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 size={24} className="animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <Loader2 size={28} className="animate-spin text-primary" />
+          <p className="text-sm">Loading your results…</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center space-y-3">
-          <p className="text-2xl">📝</p>
-          <p className="font-medium">{error}</p>
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="bg-card border rounded-2xl shadow-sm p-8 max-w-sm w-full text-center space-y-4">
+          <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mx-auto">
+            <FileX size={26} className="text-muted-foreground" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="font-bold text-lg">Result Not Found</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">{error}</p>
+          </div>
+          <Button variant="outline" className="w-full" onClick={() => router.push(`/exam/${slug}`)}>
+            Back to Exam
+          </Button>
         </div>
       </div>
     );
