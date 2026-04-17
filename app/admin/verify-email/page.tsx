@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { GraduationCap, Loader2, CheckCircle2, XCircle, ArrowLeft } from "lucide-react";
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
@@ -44,38 +45,70 @@ function VerifyEmailContent() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md p-8 space-y-6 text-center">
-        {status === "loading" && (
-          <>
-            <div className="text-4xl">⏳</div>
-            <p className="text-muted-foreground">Verifying your email…</p>
-          </>
-        )}
+      <div className="w-full max-w-sm space-y-6">
+        {/* Brand header */}
+        <div className="flex flex-col items-center gap-3">
+          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary">
+            <GraduationCap className="w-6 h-6 text-primary-foreground" />
+          </div>
+          <div className="text-center">
+            <p className="text-xl font-bold text-foreground">ExamForge</p>
+            <p className="text-sm text-muted-foreground">Admin</p>
+          </div>
+        </div>
 
-        {status === "success" && (
-          <>
-            <div className="text-4xl">✅</div>
-            <h1 className="text-xl font-bold">Email Verified!</h1>
-            <p className="text-sm text-muted-foreground">{message}</p>
-            <Link href={resetLink || "/admin/login"}>
-              <Button className="w-full">Set Your Password</Button>
-            </Link>
-          </>
-        )}
+        {/* Card */}
+        <Card className="w-full bg-card border rounded-2xl p-8 shadow-sm space-y-6 text-center">
+          {status === "loading" && (
+            <div className="flex flex-col items-center gap-4 py-4">
+              <Loader2 className="w-10 h-10 text-primary animate-spin" />
+              <div className="space-y-1">
+                <h1 className="text-lg font-semibold text-foreground">Verifying your email</h1>
+                <p className="text-sm text-muted-foreground">Please wait a moment…</p>
+              </div>
+            </div>
+          )}
 
-        {status === "error" && (
-          <>
-            <div className="text-4xl">❌</div>
-            <h1 className="text-xl font-bold">Verification Failed</h1>
-            <p className="text-sm text-destructive">{message}</p>
-            <Link href="/admin/login">
-              <Button variant="outline" className="w-full">
-                Back to Login
-              </Button>
-            </Link>
-          </>
-        )}
-      </Card>
+          {status === "success" && (
+            <div className="space-y-6">
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200">
+                  <CheckCircle2 className="w-7 h-7 text-emerald-600" />
+                </div>
+                <div className="space-y-1">
+                  <h1 className="text-lg font-semibold text-foreground">Email Verified!</h1>
+                  <p className="text-sm text-muted-foreground">{message}</p>
+                </div>
+              </div>
+
+              <Link href={resetLink || "/admin/login"}>
+                <Button className="w-full">Set Your Password</Button>
+              </Link>
+            </div>
+          )}
+
+          {status === "error" && (
+            <div className="space-y-6">
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-destructive/8 border border-destructive/20">
+                  <XCircle className="w-7 h-7 text-destructive" />
+                </div>
+                <div className="space-y-1">
+                  <h1 className="text-lg font-semibold text-foreground">Verification Failed</h1>
+                  <p className="text-sm text-destructive">{message}</p>
+                </div>
+              </div>
+
+              <Link href="/admin/login">
+                <Button variant="outline" className="w-full gap-2">
+                  <ArrowLeft className="w-4 h-4" />
+                  Back to Login
+                </Button>
+              </Link>
+            </div>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }
