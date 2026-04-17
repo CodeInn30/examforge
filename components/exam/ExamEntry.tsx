@@ -2,9 +2,21 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  GraduationCap,
+  Info,
+  AlertCircle,
+  Loader2,
+  Eye,
+  EyeOff,
+  BookOpen,
+  Star,
+  Clock,
+} from "lucide-react";
 
 interface ExamInfo {
   id: string;
@@ -25,9 +37,10 @@ interface ExamEntryProps {
 export function ExamEntry({ exam }: ExamEntryProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleStart(e: React.FormEvent) {
     e.preventDefault();
@@ -38,7 +51,7 @@ export function ExamEntry({ exam }: ExamEntryProps) {
       const res = await fetch(`/api/exam/${exam.slug}/verify-access`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.toLowerCase(), name: name || undefined }),
+        body: JSON.stringify({ email: email.toLowerCase(), password }),
       });
 
       const data = await res.json();
@@ -61,80 +74,134 @@ export function ExamEntry({ exam }: ExamEntryProps) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-lg space-y-6">
-        <div className="border rounded-xl p-8 space-y-6">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{exam.title}</h1>
-            {exam.description && (
-              <p className="text-sm text-muted-foreground mt-2">{exam.description}</p>
-            )}
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-md bg-card border rounded-2xl shadow-sm overflow-hidden">
+        {/* Coral gradient header */}
+        <div className="bg-gradient-to-br from-primary/10 to-primary/5 border-b p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-11 h-11 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+              <GraduationCap size={22} className="text-primary" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold tracking-tight leading-snug">{exam.title}</h1>
+              {exam.description && (
+                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                  {exam.description}
+                </p>
+              )}
+            </div>
           </div>
 
-          {/* Exam info */}
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="bg-muted/50 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground">Questions</p>
-              <p className="text-lg font-semibold">{exam._count.questions}</p>
-            </div>
-            <div className="bg-muted/50 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground">Total Marks</p>
-              <p className="text-lg font-semibold">{exam.totalMarks}</p>
-            </div>
-            <div className="bg-muted/50 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground">Time Limit</p>
-              <p className="text-lg font-semibold">
-                {exam.timeLimitMinutes ? `${exam.timeLimitMinutes}m` : "None"}
+          {/* Exam info pills */}
+          <div className="flex flex-wrap gap-2 mt-5">
+            <span className="inline-flex items-center gap-1.5 bg-background border rounded-full px-3 py-1 text-xs font-medium">
+              <BookOpen size={11} className="text-primary" />
+              {exam._count.questions} Questions
+            </span>
+            <span className="inline-flex items-center gap-1.5 bg-background border rounded-full px-3 py-1 text-xs font-medium">
+              <Star size={11} className="text-primary" />
+              {exam.totalMarks} Marks
+            </span>
+            <span className="inline-flex items-center gap-1.5 bg-background border rounded-full px-3 py-1 text-xs font-medium">
+              <Clock size={11} className="text-primary" />
+              {exam.timeLimitMinutes ? `${exam.timeLimitMinutes} min` : "No time limit"}
+            </span>
+          </div>
+        </div>
+
+        {/* Instructions */}
+        {exam.instructions && (
+          <div className="px-6 pt-5">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Info size={14} className="text-amber-700 shrink-0" />
+                <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide">
+                  Instructions
+                </span>
+              </div>
+              <p className="text-sm text-amber-900 whitespace-pre-wrap leading-relaxed">
+                {exam.instructions}
               </p>
             </div>
           </div>
+        )}
 
-          {exam.instructions && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-xs font-semibold text-blue-800 mb-1">Instructions</p>
-              <p className="text-sm text-blue-900 whitespace-pre-wrap">{exam.instructions}</p>
+        {/* Form */}
+        <form onSubmit={handleStart} className="p-6 space-y-5">
+          <div className="space-y-1.5">
+            <Label htmlFor="email" className="text-sm font-medium">
+              Email Address
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your@email.com"
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              Use the same email you used during enrollment.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="password" className="text-sm font-medium">
+              Exam Password
+            </Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password received on WhatsApp"
+                required
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/8 border border-destructive/20 px-3 py-2.5 rounded-lg">
+              <AlertCircle size={15} className="shrink-0 mt-0.5" />
+              <span>{error}</span>
             </div>
           )}
 
-          <form onSubmit={handleStart} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Your Gmail Address *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@gmail.com"
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                Use your Gmail. This will be your identifier for this exam.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="name">Your Name (optional)</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your full name"
-              />
-            </div>
-
-            {error && (
-              <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">
-                {error}
-              </p>
+          <Button type="submit" className="w-full" size="lg" disabled={loading}>
+            {loading ? (
+              <>
+                <Loader2 size={15} className="animate-spin" />
+                Verifying…
+              </>
+            ) : (
+              "Start Exam"
             )}
+          </Button>
+        </form>
 
-            <Button type="submit" className="w-full" size="lg" disabled={loading}>
-              {loading ? "Verifying…" : "Start Exam"}
-            </Button>
-          </form>
-
-          <p className="text-xs text-muted-foreground text-center">
-            By starting, you agree that this exam will run in fullscreen mode and tab-switching will be
-            monitored.
+        {/* Footer */}
+        <div className="px-6 pb-6 text-center space-y-2">
+          <p className="text-sm text-muted-foreground">
+            Not enrolled yet?{" "}
+            <Link
+              href={`/exam/${exam.slug}/register`}
+              className="text-primary underline-offset-4 hover:underline font-medium"
+            >
+              Register for this exam
+            </Link>
+          </p>
+          <p className="text-xs text-muted-foreground/70">
+            By starting, you agree this exam runs in fullscreen mode and tab-switching is monitored.
           </p>
         </div>
       </div>
