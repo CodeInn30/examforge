@@ -5,7 +5,7 @@ import { apiFetch } from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Mail, Link2, Users } from "lucide-react";
+import { AlertCircle, CheckCircle2, Link2, Mail, Plus, Send, Trash2, Users } from "lucide-react";
 
 interface AllowedEmail {
   id: string;
@@ -44,6 +44,7 @@ export function AccessControl({ examId, isPublished }: AccessControlProps) {
   async function updateAccessType(type: "public_link" | "specific_emails") {
     setSaving(true);
     setMessage("");
+    setError("");
     const res = await apiFetch(`/api/admin/exams/${examId}/access`, {
       method: "PATCH",
       json: { accessType: type },
@@ -70,6 +71,7 @@ export function AccessControl({ examId, isPublished }: AccessControlProps) {
 
     setSaving(true);
     setError("");
+    setMessage("");
     const res = await apiFetch(`/api/admin/exams/${examId}/access/emails`, {
       method: "POST",
       json: { emails: emailList },
@@ -119,94 +121,157 @@ export function AccessControl({ examId, isPublished }: AccessControlProps) {
     setInviting(false);
   }
 
-  if (loading) return <div className="py-8 text-center text-muted-foreground">Loading…</div>;
+  if (loading) {
+    return (
+      <div className="py-12 text-center text-muted-foreground text-sm">Loading…</div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Access type toggle */}
-      <div className="border rounded-lg p-4 space-y-3">
-        <h3 className="font-semibold text-sm">Access Type</h3>
+    <div className="space-y-6 max-w-2xl">
+      {/* Access type selector */}
+      <div className="bg-card border rounded-xl p-5 space-y-4">
+        <h3 className="text-sm font-semibold text-foreground">Access Type</h3>
         <div className="grid grid-cols-2 gap-3">
+          {/* Public Link card */}
           <button
+            type="button"
+            disabled={saving}
             onClick={() => updateAccessType("public_link")}
-            className={`flex items-center gap-3 p-3 rounded-lg border text-sm ${
+            className={`flex items-start gap-3 p-4 rounded-xl border text-left transition-all ${
               accessType === "public_link"
-                ? "border-primary bg-primary/5"
+                ? "border-primary bg-primary/5 shadow-sm"
                 : "border-border hover:bg-accent/50"
             }`}
           >
-            <Link2 size={16} />
-            <div className="text-left">
-              <p className="font-medium">Public Link</p>
-              <p className="text-xs text-muted-foreground">Anyone with the link can take it</p>
+            <div
+              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                accessType === "public_link"
+                  ? "bg-primary/15 text-primary"
+                  : "bg-muted text-muted-foreground"
+              }`}
+            >
+              <Link2 size={16} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Public Link</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Anyone with the link can take it
+              </p>
             </div>
           </button>
+
+          {/* Specific Emails card */}
           <button
+            type="button"
+            disabled={saving}
             onClick={() => updateAccessType("specific_emails")}
-            className={`flex items-center gap-3 p-3 rounded-lg border text-sm ${
+            className={`flex items-start gap-3 p-4 rounded-xl border text-left transition-all ${
               accessType === "specific_emails"
-                ? "border-primary bg-primary/5"
+                ? "border-primary bg-primary/5 shadow-sm"
                 : "border-border hover:bg-accent/50"
             }`}
           >
-            <Users size={16} />
-            <div className="text-left">
-              <p className="font-medium">Specific Emails</p>
-              <p className="text-xs text-muted-foreground">Only whitelisted emails allowed</p>
+            <div
+              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                accessType === "specific_emails"
+                  ? "bg-primary/15 text-primary"
+                  : "bg-muted text-muted-foreground"
+              }`}
+            >
+              <Users size={16} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Specific Emails</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Only whitelisted emails allowed
+              </p>
             </div>
           </button>
         </div>
       </div>
 
-      {/* Email management (shown for specific_emails) */}
+      {/* Email management */}
       {accessType === "specific_emails" && (
         <>
-          <div className="border rounded-lg p-4 space-y-3">
-            <h3 className="font-semibold text-sm">Add Allowed Emails</h3>
+          {/* Add Emails */}
+          <div className="bg-card border rounded-xl p-5 space-y-4">
+            <h3 className="text-sm font-semibold text-foreground">Add Emails</h3>
             <Textarea
               value={bulkEmails}
               onChange={(e) => setBulkEmails(e.target.value)}
-              placeholder="Paste emails — one per line, or comma/semicolon separated"
-              rows={4}
+              placeholder={
+                "Paste emails — one per line, or comma/semicolon separated\n\nalice@example.com\nbob@example.com, carol@example.com"
+              }
+              rows={5}
+              className="resize-none font-mono text-sm"
             />
-            <Button size="sm" onClick={addEmails} disabled={saving}>
-              Add Emails
+            <Button
+              size="sm"
+              onClick={addEmails}
+              disabled={saving || !bulkEmails.trim()}
+            >
+              <Plus size={14} className="mr-1.5" />
+              {saving ? "Adding…" : "Add Emails"}
             </Button>
           </div>
 
-          <div className="border rounded-lg p-4 space-y-3">
+          {/* Email list */}
+          <div className="bg-card border rounded-xl p-5 space-y-4">
+            {/* Action bar */}
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-sm">
-                Allowed Emails <span className="text-muted-foreground">({emails.length})</span>
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-foreground">Allowed Emails</h3>
+                {emails.length > 0 && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold">
+                    {emails.length}
+                  </span>
+                )}
+              </div>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={sendInvites}
                 disabled={inviting || emails.length === 0}
               >
-                <Mail size={14} className="mr-1" />
+                <Send size={13} className="mr-1.5" />
                 {inviting ? "Sending…" : "Send Invites"}
               </Button>
             </div>
 
             {emails.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">No emails added yet</p>
+              <div className="py-8 flex flex-col items-center gap-2 text-center">
+                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                  <Mail size={18} className="text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">No emails added yet</p>
+              </div>
             ) : (
-              <div className="space-y-1 max-h-64 overflow-y-auto">
+              <div className="space-y-1 max-h-72 overflow-y-auto -mx-1 px-1">
                 {emails.map((e) => (
-                  <div key={e.id} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-accent/30 group">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm">{e.email}</span>
+                  <div
+                    key={e.id}
+                    className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-accent/40 transition-colors group"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Mail size={13} className="text-muted-foreground shrink-0" />
+                      <span className="text-sm truncate text-foreground">{e.email}</span>
                       {e.inviteSentAt && (
-                        <Badge variant="secondary" className="text-xs">Invited</Badge>
+                        <Badge
+                          variant="secondary"
+                          className="text-xs shrink-0 bg-emerald-100 text-emerald-700 border-0"
+                        >
+                          Invited
+                        </Badge>
                       )}
                     </div>
                     <button
+                      type="button"
                       onClick={() => removeEmail(e.email)}
-                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                      className="opacity-0 group-hover:opacity-100 ml-2 p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all shrink-0"
+                      aria-label={`Remove ${e.email}`}
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 ))}
@@ -216,13 +281,18 @@ export function AccessControl({ examId, isPublished }: AccessControlProps) {
         </>
       )}
 
+      {/* Feedback */}
       {message && (
-        <p className="text-sm bg-green-50 text-green-800 border border-green-200 px-3 py-2 rounded-md">
+        <div className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2.5 rounded-lg flex items-center gap-2">
+          <CheckCircle2 size={15} className="shrink-0" />
           {message}
-        </p>
+        </div>
       )}
       {error && (
-        <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">{error}</p>
+        <div className="text-sm text-destructive bg-destructive/8 border border-destructive/20 px-3 py-2.5 rounded-lg flex items-center gap-2">
+          <AlertCircle size={15} className="shrink-0" />
+          {error}
+        </div>
       )}
     </div>
   );

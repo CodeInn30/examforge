@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
+import { Check, ArrowLeft, ArrowRight, CheckCircle } from "lucide-react";
 
 interface Option {
   id: string;
@@ -62,68 +62,100 @@ export function QuestionCard({
     onAnswer(question.id, next);
   }
 
+  const progressPercent = (questionNumber / totalQuestions) * 100;
+
   return (
-    <div className="flex-1 flex flex-col max-w-3xl mx-auto w-full px-4 py-6 space-y-6">
-      {/* Progress */}
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>Question {questionNumber} of {totalQuestions}</span>
-        <span>{question.marks} mark{Number(question.marks) !== 1 ? "s" : ""}</span>
-      </div>
-      <div className="w-full bg-muted rounded-full h-1.5">
-        <div
-          className="bg-primary h-1.5 rounded-full transition-all"
-          style={{ width: `${(questionNumber / totalQuestions) * 100}%` }}
-        />
-      </div>
-
-      {/* Question */}
-      <div className="space-y-4">
-        <p className="text-lg font-medium leading-relaxed">{question.questionText}</p>
-        {question.questionType === "multiple_choice" && (
-          <p className="text-xs text-muted-foreground">Select all that apply</p>
-        )}
+    <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full px-4 sm:px-6 py-6">
+      {/* Progress section */}
+      <div className="mb-5 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-muted-foreground">
+            Question {questionNumber} of {totalQuestions}
+          </span>
+          <span className="text-sm font-semibold text-primary">
+            {Math.round(progressPercent)}%
+          </span>
+        </div>
+        <div className="w-full bg-muted rounded-full h-1.5">
+          <div
+            className="bg-primary h-1.5 rounded-full transition-all duration-300"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
       </div>
 
-      {/* Options */}
-      <div className="space-y-3">
-        {question.options.map((option) => {
-          const isSelected = selected.includes(option.id);
-          return (
-            <button
-              key={option.id}
-              onClick={() => toggleOption(option.id)}
-              className={`w-full text-left p-4 rounded-lg border transition-all flex items-center gap-3 ${
-                isSelected
-                  ? "border-primary bg-primary/5 ring-1 ring-primary"
-                  : "border-border hover:bg-accent/50"
-              }`}
-            >
-              <div
-                className={`w-5 h-5 rounded-${question.questionType === "single_choice" ? "full" : "sm"} border-2 flex items-center justify-center shrink-0 ${
-                  isSelected ? "border-primary bg-primary text-primary-foreground" : "border-input"
+      {/* Question box */}
+      <div className="bg-card border rounded-xl p-6 space-y-5 flex-1">
+        <div className="space-y-3">
+          {/* Marks badge */}
+          <div>
+            <span className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs font-semibold px-2.5 py-1 rounded-full">
+              {question.marks} mark{Number(question.marks) !== 1 ? "s" : ""}
+            </span>
+          </div>
+
+          {/* Question text */}
+          <p className="text-base sm:text-lg font-medium leading-relaxed">
+            {question.questionText}
+          </p>
+
+          {/* Multiple choice tag */}
+          {question.questionType === "multiple_choice" && (
+            <span className="inline-flex items-center bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-1 rounded-full border border-amber-200">
+              Select all that apply
+            </span>
+          )}
+        </div>
+
+        {/* Options */}
+        <div className="space-y-3">
+          {question.options.map((option) => {
+            const isSelected = selected.includes(option.id);
+            const isRadio = question.questionType === "single_choice";
+
+            return (
+              <button
+                key={option.id}
+                onClick={() => toggleOption(option.id)}
+                className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center gap-3 ${
+                  isSelected
+                    ? "border-primary bg-primary/8 ring-1 ring-primary/30"
+                    : "border-border bg-background hover:border-primary/40 hover:bg-primary/5"
                 }`}
               >
-                {isSelected && <Check size={12} />}
-              </div>
-              <span className="text-sm">{option.optionText}</span>
-            </button>
-          );
-        })}
+                {/* Indicator */}
+                <div
+                  className={`w-5 h-5 ${isRadio ? "rounded-full" : "rounded-md"} border-2 flex items-center justify-center shrink-0 transition-all ${
+                    isSelected
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-input bg-background"
+                  }`}
+                >
+                  {isSelected && <Check size={11} strokeWidth={3} />}
+                </div>
+                <span className="text-sm leading-relaxed">{option.optionText}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Navigation */}
-      <div className="flex items-center justify-between pt-4 border-t mt-auto">
-        <Button variant="outline" onClick={onPrev} disabled={isFirst}>
-          ← Previous
+      {/* Navigation — sticky bottom */}
+      <div className="border-t bg-background/80 backdrop-blur-sm px-0 py-4 flex items-center justify-between mt-4">
+        <Button variant="outline" onClick={onPrev} disabled={isFirst} size="sm">
+          <ArrowLeft size={14} />
+          Previous
         </Button>
 
         {isLast ? (
-          <Button onClick={onSubmit} variant="default">
+          <Button onClick={onSubmit} size="sm">
+            <CheckCircle size={14} />
             Review & Submit
           </Button>
         ) : (
-          <Button onClick={onNext}>
-            Next →
+          <Button onClick={onNext} size="sm">
+            Next
+            <ArrowRight size={14} />
           </Button>
         )}
       </div>

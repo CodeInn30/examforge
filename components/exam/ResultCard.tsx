@@ -1,8 +1,6 @@
 "use client";
 
-import { CheckCircle, XCircle, Clock, RotateCcw } from "lucide-react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { CheckCircle, XCircle, Clock, Trophy, Target, Lightbulb, Check } from "lucide-react";
 
 interface ResultData {
   sessionId: string;
@@ -35,132 +33,143 @@ export function ResultCard({ result, examTitle }: { result: ResultData; examTitl
   const seconds = result.timeTakenSeconds ? result.timeTakenSeconds % 60 : 0;
 
   return (
-    <div className="min-h-screen bg-background p-4 flex items-start justify-center">
-      <div className="w-full max-w-2xl space-y-6 py-8">
-        {/* Result header */}
-        <div
-          className={`border rounded-xl p-8 text-center space-y-4 ${
-            result.isPassed
-              ? "bg-green-50 border-green-200"
-              : "bg-red-50 border-red-200"
-          }`}
-        >
-          {result.isPassed ? (
-            <CheckCircle size={48} className="text-green-500 mx-auto" />
-          ) : (
-            <XCircle size={48} className="text-red-500 mx-auto" />
-          )}
+    <div className="min-h-screen bg-background">
+      {/* Result hero */}
+      <div
+        className={`border-b ${
+          result.isPassed
+            ? "bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200"
+            : "bg-gradient-to-br from-red-50 to-red-100/50 border-red-200"
+        }`}
+      >
+        <div className="max-w-2xl mx-auto px-4 py-12 text-center space-y-4">
+          {/* Icon */}
+          <div className="flex justify-center">
+            {result.isPassed ? (
+              <Trophy size={52} className="text-emerald-500" />
+            ) : (
+              <Target size={52} className="text-red-400" />
+            )}
+          </div>
 
-          <h1 className="text-2xl font-bold">
-            {result.isPassed ? "Congratulations!" : "Better luck next time"}
-          </h1>
-          {examTitle && <p className="text-muted-foreground text-sm">{examTitle}</p>}
-
-          <div className="text-5xl font-bold">
+          {/* Percentage */}
+          <div className="text-6xl font-bold tracking-tight">
             {Number(result.percentage).toFixed(1)}%
           </div>
 
-          <p className="text-muted-foreground">
-            Score: {Number(result.score)} / {Number(result.totalMarks)}
+          {/* Score fraction */}
+          <p className="text-muted-foreground font-medium">
+            {Number(result.score)} / {Number(result.totalMarks)} marks
           </p>
 
+          {/* Time */}
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <Clock size={14} />
-            Time taken: {minutes}m {seconds}s
+            <span>
+              {minutes}m {seconds}s
+            </span>
           </div>
 
-          <div
-            className={`inline-block px-4 py-1 rounded-full text-sm font-semibold ${
-              result.isPassed
-                ? "bg-green-100 text-green-800"
-                : "bg-red-100 text-red-800"
-            }`}
-          >
-            {result.isPassed ? "PASSED" : "FAILED"}
+          {/* Exam title */}
+          {examTitle && (
+            <p className="text-sm text-muted-foreground">{examTitle}</p>
+          )}
+
+          {/* Pass/fail badge */}
+          <div>
+            <span
+              className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-bold tracking-wide ${
+                result.isPassed
+                  ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                  : "bg-red-100 text-red-800 border border-red-200"
+              }`}
+            >
+              {result.isPassed ? (
+                <CheckCircle size={14} />
+              ) : (
+                <XCircle size={14} />
+              )}
+              {result.isPassed ? "PASSED" : "FAILED"}
+            </span>
           </div>
         </div>
+      </div>
 
-        {/* Answer review */}
-        {result.responses && result.responses.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="font-bold text-lg">Answer Review</h2>
-            {result.responses.map((r, i) => (
-              <div
-                key={r.question.id}
-                className={`border rounded-lg p-4 space-y-3 ${
-                  r.isCorrect
-                    ? "border-green-200 bg-green-50/50"
-                    : r.isSkipped
-                    ? "border-zinc-200"
-                    : "border-red-200 bg-red-50/50"
-                }`}
-              >
-                <div className="flex items-start gap-2">
-                  <span className="text-xs text-muted-foreground shrink-0 mt-0.5">Q{i + 1}</span>
-                  <p className="text-sm font-medium">{r.question.questionText}</p>
-                  {r.isCorrect === true && (
-                    <CheckCircle size={14} className="text-green-500 shrink-0 mt-0.5" />
-                  )}
-                  {r.isCorrect === false && (
-                    <XCircle size={14} className="text-red-500 shrink-0 mt-0.5" />
-                  )}
-                </div>
+      {/* Answer review */}
+      {result.responses && result.responses.length > 0 && (
+        <div className="max-w-2xl mx-auto px-4 py-8 space-y-4">
+          <h2 className="text-lg font-bold mb-6">Answer Review</h2>
 
-                {r.isSkipped ? (
-                  <p className="text-xs text-muted-foreground">Skipped</p>
-                ) : (
-                  <div className="space-y-1">
-                    {r.question.options.map((opt) => {
-                      const wasSelected = r.selectedOptions.some((s) => s.option.id === opt.id);
-                      return (
-                        <div
-                          key={opt.id}
-                          className={`text-xs px-3 py-1.5 rounded flex items-center gap-2 ${
-                            opt.isCorrect
-                              ? "bg-green-100 text-green-800"
-                              : wasSelected && !opt.isCorrect
-                              ? "bg-red-100 text-red-800"
-                              : "text-muted-foreground"
-                          }`}
-                        >
-                          {wasSelected && <Check size={10} className="shrink-0" />}
-                          {opt.optionText}
-                          {opt.isCorrect && <span className="ml-auto font-medium">✓ Correct</span>}
-                        </div>
-                      );
-                    })}
-                  </div>
+          {result.responses.map((r, i) => (
+            <div
+              key={r.question.id}
+              className={`bg-card border rounded-xl p-5 space-y-4 ${
+                r.isSkipped
+                  ? "border-l-4 border-l-zinc-300"
+                  : r.isCorrect
+                  ? "border-l-4 border-l-emerald-400"
+                  : "border-l-4 border-l-red-400"
+              }`}
+            >
+              {/* Question row */}
+              <div className="flex items-start gap-3">
+                <span className="text-xs text-muted-foreground font-medium bg-muted px-2 py-0.5 rounded-md shrink-0 mt-0.5">
+                  Q{i + 1}
+                </span>
+                <p className="text-sm font-medium leading-relaxed flex-1">
+                  {r.question.questionText}
+                </p>
+                {r.isCorrect === true && (
+                  <CheckCircle size={16} className="text-emerald-500 shrink-0 mt-0.5" />
                 )}
-
-                {r.question.explanation && (
-                  <p className="text-xs text-blue-700 bg-blue-50 px-3 py-2 rounded">
-                    💡 {r.question.explanation}
-                  </p>
+                {r.isCorrect === false && (
+                  <XCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
                 )}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
-function Check({ size, className }: { size: number; className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
+              {/* Options as pill chips */}
+              {r.isSkipped ? (
+                <p className="text-xs text-muted-foreground italic">Skipped</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {r.question.options.map((opt) => {
+                    const wasSelected = r.selectedOptions.some((s) => s.option.id === opt.id);
+                    const isCorrect = opt.isCorrect;
+                    const isWrongSelected = wasSelected && !isCorrect;
+
+                    return (
+                      <span
+                        key={opt.id}
+                        className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-medium ${
+                          isCorrect
+                            ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                            : isWrongSelected
+                            ? "bg-red-100 text-red-800 border-red-200"
+                            : "bg-muted text-muted-foreground border-transparent"
+                        }`}
+                      >
+                        {wasSelected && <Check size={10} strokeWidth={3} />}
+                        {opt.optionText}
+                        {isCorrect && (
+                          <span className="font-semibold ml-0.5">&#10003;</span>
+                        )}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Explanation */}
+              {r.question.explanation && (
+                <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                  <Lightbulb size={13} className="text-blue-500 shrink-0 mt-0.5" />
+                  <p className="text-sm text-blue-700 leading-relaxed">{r.question.explanation}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

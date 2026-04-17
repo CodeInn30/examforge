@@ -1,10 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
-import { Clock, CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, XCircle, ClipboardList } from "lucide-react";
 
 interface Session {
   id: string;
@@ -49,8 +45,41 @@ const statusBadge: Record<string, { label: string; class: string }> = {
   submitted: { label: "Submitted", class: "bg-green-100 text-green-700" },
   auto_submitted: { label: "Auto-submitted", class: "bg-amber-100 text-amber-700" },
   in_progress: { label: "In Progress", class: "bg-blue-100 text-blue-700" },
-  expired: { label: "Expired", class: "bg-zinc-100 text-zinc-700" },
+  expired: { label: "Expired", class: "bg-zinc-100 text-zinc-600" },
 };
+
+const analyticsCards = [
+  {
+    key: "total" as const,
+    label: "Total Submissions",
+    sublabel: (a: Analytics) =>
+      a.inProgress > 0 ? `${a.inProgress} in progress` : "all sessions",
+    accent: "border-l-blue-400",
+    value: (a: Analytics) => String(a.total),
+  },
+  {
+    key: "passRate" as const,
+    label: "Pass Rate",
+    sublabel: (a: Analytics) => `${a.passed} passed · ${a.failed} failed`,
+    accent: "border-l-emerald-400",
+    value: (a: Analytics) => `${a.passRate}%`,
+  },
+  {
+    key: "avgScore" as const,
+    label: "Avg Score",
+    sublabel: () => "across submitted sessions",
+    accent: "border-l-amber-400",
+    value: (a: Analytics) => `${a.avgScore}%`,
+  },
+  {
+    key: "avgTimeSeconds" as const,
+    label: "Avg Time",
+    sublabel: (a: Analytics) =>
+      a.autoSubmitted > 0 ? `${a.autoSubmitted} auto-submitted` : "time on exam",
+    accent: "border-l-purple-400",
+    value: (a: Analytics) => formatTime(a.avgTimeSeconds),
+  },
+];
 
 export function SubmissionsTable({ sessions, analytics, examId }: SubmissionsTableProps) {
   return (
@@ -58,88 +87,123 @@ export function SubmissionsTable({ sessions, analytics, examId }: SubmissionsTab
       {/* Analytics cards */}
       {analytics && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="border rounded-lg p-4">
-            <p className="text-xs text-muted-foreground">Total Submissions</p>
-            <p className="text-2xl font-bold mt-1">{analytics.total}</p>
-          </div>
-          <div className="border rounded-lg p-4">
-            <p className="text-xs text-muted-foreground">Pass Rate</p>
-            <p className="text-2xl font-bold mt-1">{analytics.passRate}%</p>
-          </div>
-          <div className="border rounded-lg p-4">
-            <p className="text-xs text-muted-foreground">Avg Score</p>
-            <p className="text-2xl font-bold mt-1">{analytics.avgScore}%</p>
-          </div>
-          <div className="border rounded-lg p-4">
-            <p className="text-xs text-muted-foreground">Avg Time</p>
-            <p className="text-2xl font-bold mt-1">{formatTime(analytics.avgTimeSeconds)}</p>
-          </div>
+          {analyticsCards.map((card) => (
+            <div
+              key={card.key}
+              className={`bg-card border rounded-xl p-5 border-l-4 ${card.accent}`}
+            >
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {card.label}
+              </p>
+              <p className="text-2xl font-bold mt-2 text-foreground">{card.value(analytics)}</p>
+              <p className="text-xs text-muted-foreground mt-1">{card.sublabel(analytics)}</p>
+            </div>
+          ))}
         </div>
       )}
 
       {sessions.length === 0 ? (
-        <p className="text-center py-12 text-muted-foreground">No submissions yet</p>
+        <div className="bg-card border rounded-xl py-16 flex flex-col items-center gap-3 text-center">
+          <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+            <ClipboardList size={22} className="text-muted-foreground" />
+          </div>
+          <p className="font-medium text-foreground">No submissions yet</p>
+          <p className="text-sm text-muted-foreground max-w-xs">
+            Once students complete this exam, their results will appear here.
+          </p>
+        </div>
       ) : (
-        <div className="border rounded-lg overflow-hidden">
+        <div className="bg-card border rounded-xl overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-xs text-muted-foreground">
+            <thead className="bg-muted/60 border-b">
               <tr>
-                <th className="text-left px-4 py-3">Student</th>
-                <th className="text-left px-4 py-3">Status</th>
-                <th className="text-right px-4 py-3">Score</th>
-                <th className="text-right px-4 py-3">Time</th>
-                <th className="text-right px-4 py-3">Security</th>
-                <th className="text-right px-4 py-3">Submitted</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Student
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Status
+                </th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Score
+                </th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Time
+                </th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Security
+                </th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Submitted
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody>
               {sessions.map((session) => {
                 const badge = statusBadge[session.status];
+                const isClean =
+                  session.tabSwitchCount === 0 && session.fullscreenExitCount === 0;
+
                 return (
-                  <tr key={session.id} className="hover:bg-accent/30">
+                  <tr
+                    key={session.id}
+                    className="hover:bg-accent/30 transition-colors border-b last:border-0"
+                  >
                     <td className="px-4 py-3">
-                      <p className="font-medium">{session.student.email}</p>
+                      <p className="font-semibold text-foreground">{session.student.email}</p>
                       {session.student.name && (
-                        <p className="text-xs text-muted-foreground">{session.student.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {session.student.name}
+                        </p>
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${badge?.class}`}>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${badge?.class ?? "bg-zinc-100 text-zinc-600"}`}
+                        >
                           {badge?.label ?? session.status}
                         </span>
-                        {session.isPassed === true && <CheckCircle size={14} className="text-green-500" />}
-                        {session.isPassed === false && <XCircle size={14} className="text-red-500" />}
+                        {session.isPassed === true && (
+                          <CheckCircle size={14} className="text-emerald-500" />
+                        )}
+                        {session.isPassed === false && (
+                          <XCircle size={14} className="text-red-500" />
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">
                       {session.score !== null ? (
-                        <span>
+                        <span className="font-medium text-foreground">
                           {Number(session.score)}/{Number(session.totalMarks)}
-                          <span className="text-muted-foreground ml-1 text-xs">
+                          <span className="text-muted-foreground ml-1 text-xs font-normal">
                             ({Number(session.percentage).toFixed(0)}%)
                           </span>
                         </span>
                       ) : (
-                        "—"
+                        <span className="text-muted-foreground">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-right text-muted-foreground">
                       {formatTime(session.timeTakenSeconds)}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {session.tabSwitchCount > 0 && (
-                        <span className="text-xs text-amber-600 mr-2">
-                          {session.tabSwitchCount} tab switch
+                      {isClean ? (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-emerald-100 text-emerald-700">
+                          Clean
                         </span>
-                      )}
-                      {session.fullscreenExitCount > 0 && (
-                        <span className="text-xs text-amber-600">
-                          {session.fullscreenExitCount} fullscreen exit
-                        </span>
-                      )}
-                      {session.tabSwitchCount === 0 && session.fullscreenExitCount === 0 && (
-                        <span className="text-xs text-green-600">Clean</span>
+                      ) : (
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          {session.tabSwitchCount > 0 && (
+                            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">
+                              {session.tabSwitchCount} tab switch
+                            </span>
+                          )}
+                          {session.fullscreenExitCount > 0 && (
+                            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">
+                              {session.fullscreenExitCount} fullscreen exit
+                            </span>
+                          )}
+                        </div>
                       )}
                     </td>
                     <td className="px-4 py-3 text-right text-muted-foreground text-xs">
