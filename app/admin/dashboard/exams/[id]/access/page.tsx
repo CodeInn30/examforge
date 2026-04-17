@@ -6,7 +6,11 @@ import { apiFetch } from "@/lib/apiClient";
 import { AccessControl } from "@/components/admin/AccessControl";
 import { ArrowLeft } from "lucide-react";
 
-export default function AccessPage({ params }: { params: Promise<{ id: string }> }) {
+export default function AccessPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const [isPublished, setIsPublished] = useState(false);
   const [examTitle, setExamTitle] = useState("");
@@ -21,17 +25,25 @@ export default function AccessPage({ params }: { params: Promise<{ id: string }>
   }, [id]);
 
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href={`/admin/dashboard/exams/${id}`} className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft size={18} />
+    <div className="flex flex-col flex-1 p-6 gap-6">
+      {/* Back + header */}
+      <div>
+        <Link
+          href={`/admin/dashboard/exams/${id}`}
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-2"
+        >
+          <ArrowLeft className="size-4" />
+          Back
         </Link>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Access Control</h1>
-          {examTitle && <p className="text-sm text-muted-foreground">{examTitle}</p>}
-        </div>
+        <h1 className="text-2xl font-bold tracking-tight">Access Control</h1>
+        {examTitle && (
+          <p className="text-sm text-muted-foreground mt-1">{examTitle}</p>
+        )}
       </div>
-      <AccessControl examId={id} isPublished={isPublished} />
+
+      <div className="max-w-2xl">
+        <AccessControl examId={id} isPublished={isPublished} />
+      </div>
     </div>
   );
 }
