@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAdminAuth } from "@/lib/withAdminAuth";
+import { invalidateExamCaches } from "@/lib/examCacheInvalidation";
 import { updateExamSchema } from "@/lib/validators/examSchemas";
 import { z } from "zod";
 
@@ -53,6 +54,7 @@ export function PATCH(req: NextRequest, ctx: RouteContext) {
       },
     });
 
+    await invalidateExamCaches(id, exam.slug);
     return NextResponse.json({ exam: updated });
   })(req, ctx);
 }

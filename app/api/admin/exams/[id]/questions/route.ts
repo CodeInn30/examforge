@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAdminAuth } from "@/lib/withAdminAuth";
+import { invalidateExamCaches } from "@/lib/examCacheInvalidation";
 import { createQuestionSchema } from "@/lib/validators/examSchemas";
 import { z } from "zod";
 
@@ -84,6 +85,7 @@ export function POST(req: NextRequest, ctx: RouteContext) {
     const totalMarks = allQuestions.reduce((sum: number, q: { marks: unknown }) => sum + Number(q.marks), 0);
     await prisma.examForm.update({ where: { id: examId }, data: { totalMarks } });
 
+    await invalidateExamCaches(examId);
     return NextResponse.json({ question }, { status: 201 });
   })(req, ctx);
 }
