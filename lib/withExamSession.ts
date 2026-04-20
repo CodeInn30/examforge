@@ -22,7 +22,7 @@ export type SessionHandler = (
 ) => Promise<NextResponse> | NextResponse;
 
 async function loadSession(sessionToken: string): Promise<SessionData | null> {
-  const raw = await cacheWrap(CacheKeys.session(sessionToken), 10, () =>
+  const raw = await cacheWrap(CacheKeys.session(sessionToken), 60, () =>
     prisma.examSession.findUnique({
       where: { sessionToken },
       select: {
