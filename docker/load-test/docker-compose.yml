@@ -1,0 +1,131 @@
+services:
+
+  # ── PostgreSQL ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: ef_postgres
+    environment:
+      POSTGRES_DB:       examforge
+      POSTGRES_USER:     examforge_user
+      POSTGRES_PASSWORD: examforge_pass
+    ports:
+      - "5434:5432"
+    volumes:
+      - ef_pgdata:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U examforge_user -d examforge"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    command: >
+      postgres
+        -c max_connections=300
+        -c shared_buffers=512MB
+        -c effective_cache_size=1536MB
+        -c work_mem=8MB
+        -c maintenance_work_mem=256MB
+        -c checkpoint_completion_target=0.9
+        -c wal_buffers=32MB
+        -c max_wal_size=1GB
+
+  # ── PgBouncer ──────────────────────────────────────────────────────────────
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: ef_pgbouncer
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "6432:5432"
+    environment:
+      DATABASE_URL:              postgres://examforge_user:examforge_pass@postgres:5432/examforge
+      POOL_MODE:                 transaction
+      MAX_CLIENT_CONN:           2000
+      DEFAULT_POOL_SIZE:         100
+      RESERVE_POOL_SIZE:         20
+      RESERVE_POOL_TIMEOUT:      "3"
+      SERVER_IDLE_TIMEOUT:       "30"
+      IGNORE_STARTUP_PARAMETERS: extra_float_digits,options
+      QUERY_WAIT_TIMEOUT:        "10"
+      AUTH_TYPE:                 plain
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 5432 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: ef_redis
+    ports:
+      - "6380:6379"
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── Next.js App ────────────────────────────────────────────────────────────
+  app:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: ef_app
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV:                    production
+      NEXT_PUBLIC_APP_URL:         http://localhost:3000
+      # App queries via PgBouncer (transaction mode, connection pooled)
+      DATABASE_URL:                postgresql://examforge_user:examforge_pass@pgbouncer:5432/examforge
+      # Migrations run directly against Postgres (PgBouncer can't run DDL)
+      DIRECT_DATABASE_URL:         postgresql://examforge_user:examforge_pass@postgres:5432/examforge
+      JWT_ACCESS_SECRET:           loadtest_access_secret_min32chars_xxxx
+      JWT_REFRESH_SECRET:          loadtest_refresh_secret_min32chars_xxxx
+      JWT_ACCESS_EXPIRES_IN:       15m
+      JWT_REFRESH_EXPIRES_IN:      7d
+      REDIS_URL:                   redis://redis:6379
+      REDIS_ENABLED:               "true"
+      CACHE_DEFAULT_TTL_SECONDS:   "300"
+      # WhatsApp OFF — paid API, load test only
+      WHATSAPP_ENABLED:            "false"
+      NEXT_PUBLIC_ORG_NAME:        ExamForge
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+
+  # ── k6 Load Test ──────────────────────────────────────────────────────────
+  # Start with: docker compose --profile k6 up k6
+  k6:
+    image: grafana/k6:latest
+    container_name: ef_k6
+    profiles: ["k6"]
+    network_mode: host
+    volumes:
+      - ../../tests/k6:/scripts
+    environment:
+      BASE_URL:  ${BASE_URL:-http://localhost:3000}
+      EXAM_SLUG: ${EXAM_SLUG:-load-test-exam}
+      SCENARIO:  ${SCENARIO:-2k}
+    command: >
+      run /scripts/exam-flow.js
+      --out json=/scripts/results/last-run.json
+    depends_on:
+      - app
+      - postgres
+      - pgbouncer
+      - redis
+
+volumes:
+  ef_pgdata:
