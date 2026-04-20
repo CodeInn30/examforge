@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  serverExternalPackages: ["@prisma/client", "prisma", "pg"],
+  outputFileTracingExcludes: {
+    "*": ["node_modules/@prisma/engines/**"],
+  },
 };
 
 export default nextConfig;

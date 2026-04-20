@@ -1,0 +1,10 @@
+; PgBouncer userlist.txt
+;
+; Generate the SCRAM-SHA-256 hash for your PostgreSQL user with:
+;   psql -c "SELECT pg_catalog.concat('\"', usename, '\" \"', passwd, '\"') FROM pg_shadow WHERE usename='examforge_user';"
+;
+; Then replace the placeholder below with the output from that command.
+;
+; Format: "username" "SCRAM-SHA-256$<hash>"
+;
+"examforge_user" "SCRAM-SHA-256$<paste-hash-from-psql-here>"

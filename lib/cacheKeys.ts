@@ -10,4 +10,5 @@ export const CacheKeys = {
   hbLastFlush: (sessionId: string) => `ef:hb:${sessionId}:flush`,
   owner: (examFormId: string, studentId: string) => `ef:owner:${examFormId}:${studentId}`,
   rate: (key: string) => `ef:rate:${key}`,
+  scoringPending: (sessionId: string) => `ef:scoring:${sessionId}`,
 }

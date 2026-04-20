@@ -1,22 +1,14 @@
-import Redis from "ioredis"
+import { Redis } from "@upstash/redis"
 
 const REDIS_ENABLED = process.env.REDIS_ENABLED !== "false"
-const REDIS_URL = process.env.REDIS_URL ?? "redis://localhost:6379"
 
 function createRedisClient(): Redis | null {
   if (!REDIS_ENABLED) return null
+  const url = process.env.UPSTASH_REDIS_REST_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  if (!url || !token) return null
   try {
-    const client = new Redis(REDIS_URL, {
-      maxRetriesPerRequest: 1,
-      enableReadyCheck: false,
-      lazyConnect: true,
-      // Silently fail — never block exam if Redis is down
-      reconnectOnError: () => true,
-    })
-    client.on("error", () => {
-      // Swallow errors — fail-open
-    })
-    return client
+    return new Redis({ url, token })
   } catch {
     return null
   }
@@ -38,9 +30,7 @@ if (process.env.NODE_ENV !== "production") {
 export async function cacheGet<T>(key: string): Promise<T | null> {
   if (!redis) return null
   try {
-    const val = await redis.get(key)
-    if (!val) return null
-    return JSON.parse(val) as T
+    return await redis.get<T>(key)
   } catch {
     return null
   }
@@ -49,7 +39,7 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
 export async function cacheSet(key: string, value: unknown, ttlSeconds: number): Promise<void> {
   if (!redis) return
   try {
-    await redis.set(key, JSON.stringify(value), "EX", ttlSeconds)
+    await redis.set(key, value, { ex: ttlSeconds })
   } catch {
     // fail-open
   }
@@ -75,8 +65,8 @@ export async function cacheWrap<T>(
 ): Promise<T> {
   if (redis) {
     try {
-      const cached = await redis.get(key)
-      if (cached) return JSON.parse(cached) as T
+      const cached = await redis.get<T>(key)
+      if (cached !== null) return cached
     } catch {
       // fall through to loader
     }
@@ -86,7 +76,7 @@ export async function cacheWrap<T>(
 
   if (value !== null && value !== undefined && redis) {
     try {
-      await redis.set(key, JSON.stringify(value), "EX", ttlSeconds)
+      await redis.set(key, value, { ex: ttlSeconds })
     } catch {
       // fail-open
     }
