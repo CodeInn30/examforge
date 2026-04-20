@@ -6,8 +6,15 @@ interface RateLimitEntry {
   resetAt: number;
 }
 
-// In-process fallback when Redis is unavailable
 const store = new Map<string, RateLimitEntry>();
+
+// Purge expired entries periodically to prevent unbounded memory growth
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of store.entries()) {
+    if (now > entry.resetAt) store.delete(key);
+  }
+}, 60_000);
 
 function inMemoryRateLimit(
   key: string,
@@ -45,10 +52,10 @@ export async function rateLimit(
   try {
     const pipeline = redis.pipeline();
     pipeline.incr(redisKey);
-    pipeline.expire(redisKey, windowSec, "NX"); // only set TTL on first INCR
+    pipeline.expire(redisKey, windowSec, "NX");
     const results = await pipeline.exec();
 
-    const count = (results?.[0]?.[1] as number) ?? 1;
+    const count = (results?.[0] as number) ?? 1;
     const remaining = Math.max(0, maxRequests - count);
     const success = count <= maxRequests;
 

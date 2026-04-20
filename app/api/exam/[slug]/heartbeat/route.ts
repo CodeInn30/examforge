@@ -71,9 +71,9 @@ export function POST(req: NextRequest, ctx: RouteContext) {
       const results = await pipeline.exec();
 
       const resultOffset = body.event === "tab_switch" || body.event === "fullscreen_exit" ? 3 : 0;
-      tabSwitchCount = parseInt((results?.[resultOffset]?.[1] as string) ?? "0") || session.tabSwitchCount;
-      fullscreenExitCount = parseInt((results?.[resultOffset + 1]?.[1] as string) ?? "0") || session.fullscreenExitCount;
-      const lastFlush = parseInt((results?.[resultOffset + 2]?.[1] as string) ?? "0") || 0;
+      tabSwitchCount = parseInt(String(results?.[resultOffset] ?? "0")) || session.tabSwitchCount;
+      fullscreenExitCount = parseInt(String(results?.[resultOffset + 1] ?? "0")) || session.fullscreenExitCount;
+      const lastFlush = parseInt(String(results?.[resultOffset + 2] ?? "0")) || 0;
 
       const shouldFlush = Date.now() - lastFlush >= FLUSH_INTERVAL_MS;
       if (shouldFlush && (body.event === "tab_switch" || body.event === "fullscreen_exit")) {
