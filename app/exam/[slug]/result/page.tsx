@@ -27,12 +27,28 @@ function ResultContent() {
       return;
     }
 
-    Promise.all([
-      fetch(`/api/exam/${slug}`).then((r) => r.json()),
-      fetch(`/api/exam/${slug}/result/${sessionId}`).then((r) => r.json()),
-    ])
-      .then(([examData, resultData]) => {
+    let cancelled = false;
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
+
+    async function fetchResult() {
+      try {
+        const [examData, resultData] = await Promise.all([
+          fetch(`/api/exam/${slug}`).then((r) => r.json()),
+          fetch(`/api/exam/${slug}/result/${sessionId}`).then((r) => r.json()),
+        ]);
+
+        if (cancelled) return;
+
         setExamTitle(examData.exam?.title ?? "");
+
+        if (resultData.scorePending) {
+          // Scoring is still running in background — retry in 1.5s
+          pollTimer = setTimeout(fetchResult, 1500);
+          return;
+        }
+
+        setLoading(false);
+
         if (resultData.result) {
           setResult(resultData.result);
         } else if (resultData.message) {
@@ -40,9 +56,20 @@ function ResultContent() {
         } else {
           setError(resultData.error ?? "Result not found");
         }
-      })
-      .catch(() => setError("Failed to load result"))
-      .finally(() => setLoading(false));
+      } catch {
+        if (!cancelled) {
+          setError("Failed to load result");
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchResult();
+
+    return () => {
+      cancelled = true;
+      if (pollTimer) clearTimeout(pollTimer);
+    };
   }, [slug, sessionId]);
 
   if (loading) {
@@ -50,7 +77,7 @@ function ResultContent() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3 text-muted-foreground">
           <Loader2 size={28} className="animate-spin text-primary" />
-          <p className="text-sm">Loading your results…</p>
+          <p className="text-sm">Calculating your results…</p>
         </div>
       </div>
     );
